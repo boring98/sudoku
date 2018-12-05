@@ -1,16 +1,35 @@
 //@ts-check
 
+const fs = require('fs')
+// const Buffer = require('buffer')
+
+const resultFileNam = 'standard_result.txt'
+
+// const ws = fs.createWriteStream('./standard_result.txt')
+
 const original_problem = [
-    [0, 0, 3, 0, 9, 0, 0, 8, 0],
-    [0, 7, 5, 0, 2, 0, 0, 0, 0],
-    [4, 0, 6, 0, 0, 5, 0, 0, 0],
-    [0, 1, 9, 0, 0, 0, 0, 0, 4],
-    [0, 6, 0, 1, 0, 4, 0, 2, 0],
-    [2, 0, 0, 0, 0, 0, 7, 1, 0],
-    [0, 0, 0, 6, 0, 0, 8, 0, 7],
-    [0, 0, 0, 0, 8, 0, 1, 5, 0],
-    [0, 3, 0, 0, 4, 0, 6, 0, 0],
+    [1, 2, 3, 4, 5, 6, 7, 8, 9],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0],
 ]
+
+// const original_problem = [
+//     [0, 0, 3, 0, 9, 0, 0, 8, 0],
+//     [0, 7, 5, 0, 2, 0, 0, 0, 0],
+//     [4, 0, 6, 0, 0, 5, 0, 0, 0],
+//     [0, 1, 9, 0, 0, 0, 0, 0, 4],
+//     [0, 6, 0, 1, 0, 4, 0, 2, 0],
+//     [2, 0, 0, 0, 0, 0, 7, 1, 0],
+//     [0, 0, 0, 6, 0, 0, 8, 0, 7],
+//     [0, 0, 0, 0, 8, 0, 1, 5, 0],
+//     [0, 3, 0, 0, 4, 0, 6, 0, 0],
+// ]
 
 // const original_problem = [
 //     [0, 0, 6, 0, 4, 0, 0, 1, 0],
@@ -501,11 +520,11 @@ function update(table, point) {
     sudo.update()
     const status = sudo.getStatus()
     if (status != 1) {
-        return { table: retTable, possibleValueArryOfOnePoint: [], status: status}
+        return { table: retTable, possibleValueArryOfOnePoint: [], status: status }
     }
     let min = 9
-    let x= 0
-    let y= 0
+    let x = 0
+    let y = 0
     for (let i = 0; i < 9; i++) {
         for (let j = 0; j < 9; j++) {
             const size = sudo.possibleSet[i][j].size
@@ -521,10 +540,10 @@ function update(table, point) {
     }
     if (min != 9) {
         for (const value of sudo.possibleSet[x][y]) {
-            possibleValueArryOfOnePoint.push({x:x,y:y, value: value})
+            possibleValueArryOfOnePoint.push({ x: x, y: y, value: value })
         }
     }
-    return { table: retTable, possibleValueArryOfOnePoint: possibleValueArryOfOnePoint, status: 1}
+    return { table: retTable, possibleValueArryOfOnePoint: possibleValueArryOfOnePoint, status: 1 }
 }
 
 // /**
@@ -544,7 +563,7 @@ function tryOne(table, possibleValueArryOfOnePoint) {
     for (const point of possibleValueArryOfOnePoint) {
         res = update(table, point)
         if (res.status == 0) {
-            return {answer: res.table, status: 0 }
+            return { answer: res.table, status: 0 }
         } else if (res.status == -1) {
             continue
         } else if (res.status == 1) {
@@ -554,7 +573,33 @@ function tryOne(table, possibleValueArryOfOnePoint) {
             }
         }
     }
-    return {status: -1}
+    return { status: -1 }
+}
+
+function findAll(table, possibleValueArryOfOnePoint) {
+    // console.log('current table is: ')
+    // console.log(table)
+    // console.log('possibleValueArryOfOnePoint is: ')
+    // console.log(possibleValueArryOfOnePoint)
+    const result = []
+    for (const point of possibleValueArryOfOnePoint) {
+        let res = update(table, point)
+        if (res.status == 0) {
+            console.log(res.table)
+            // console.log(Buffer.from(res.table))
+            fs.appendFileSync(resultFileNam, JSON.stringify(res.table) + ',\n')
+            // ws.write(JSON.stringify(res.table))
+            result.push(res.table)
+        } else if (res.status == -1) {
+            continue
+        } else if (res.status == 1) {
+            const tmpRes = findAll(res.table, res.possibleValueArryOfOnePoint)
+            if (tmpRes.length != 0) {
+                result.push(tmpRes)
+            }
+        }
+    }
+    return result
 }
 
 function solve(problem) {
@@ -566,6 +611,28 @@ function solve(problem) {
     } else if (res.status == 1) {
         return tryOne(res.table, res.possibleValueArryOfOnePoint)
     }
+}
+
+function findAllSolutionsForStandard(problem) {
+    fs.appendFileSync(resultFileNam, '[\n')
+    const res = update(problem)
+    if (res.status == 0) {
+        return res.table
+    } else if (res.status == -1) {
+        throw new Error('Problem can not be solved')
+    }
+    findAll(res.table, res.possibleValueArryOfOnePoint)
+    fs.appendFileSync(resultFileNam, ']\n')
+}
+
+function findAllSolutions(problem) {
+    const res = update(problem)
+    if (res.status == 0) {
+        return res.table
+    } else if (res.status == -1) {
+        throw new Error('Problem can not be solved')
+    }
+    return findAll(res.table, res.possibleValueArryOfOnePoint)
 }
 
 function convertText2Problem(t) {
@@ -591,7 +658,8 @@ function deepcopy(obj) {
 function start(original_problem) {
     console.log('Question is:')
     console.log(original_problem)
-    const answer = solve(original_problem)
+    const answer = findAllSolutionsForStandard(original_problem)
+    // const answer = solve(original_problem)
     console.log('Answer is:')
     console.log(answer)
 }
@@ -600,29 +668,29 @@ function startText(text) {
     start(problem)
 }
 
-// start(original_problem)
-startText(`
+start(original_problem)
+// startText(`
 
 
 
-randomly generated - fiendish
+// randomly generated - fiendish
 
-+-------+-------+-------+       k
-| 2 1 . | . 9 6 | . . 3 |     h   l move cursor
-| . . . | 7 . . | 1 . 6 |       j
-Rules:                     | . . . | . 5 . | . . . |      1-9  place digit
-+-------+-------+-------+      0 .  clear digit
-Fill the grid so that     | . 7 . | 2 . . | . 5 . |       c   clear board
-every column, row and     | . . 4 | . . . | 9 . . |       f   fix squares
-3x3 box contains each     | . 8 . | . . 1 | . 2 . |       n   new board
-of the digits 1 to 9.     +-------+-------+-------+       q   quit game
-| . . . | . 4 . | . . . |       s   save
-| 8 . 3 | . . 7 | . . . |       r   restart
-| 7 . . | 3 6 . | . 9 1 |       u   undo last move
-+-------+-------+-------+       v   solve
-                                ?   request hint
-Su-Do-Ku by Michael Kennett
+// +-------+-------+-------+       k
+// | 2 1 . | . 9 6 | . . 3 |     h   l move cursor
+// | . . . | 7 . . | 1 . 6 |       j
+// Rules:                     | . . . | . 5 . | . . . |      1-9  place digit
+// +-------+-------+-------+      0 .  clear digit
+// Fill the grid so that     | . 7 . | 2 . . | . 5 . |       c   clear board
+// every column, row and     | . . 4 | . . . | 9 . . |       f   fix squares
+// 3x3 box contains each     | . 8 . | . . 1 | . 2 . |       n   new board
+// of the digits 1 to 9.     +-------+-------+-------+       q   quit game
+// | . . . | . 4 . | . . . |       s   save
+// | 8 . 3 | . . 7 | . . . |       r   restart
+// | 7 . . | 3 6 . | . 9 1 |       u   undo last move
+// +-------+-------+-------+       v   solve
+//                                 ?   request hint
+// Su-Do-Ku by Michael Kennett
 
 
 
-`)
+// `)
