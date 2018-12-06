@@ -70,4 +70,7 @@ of the digits 1 to 9.     +-------+-------+-------+       q   quit game
 +-------+-------+-------+       v   solve
 
 `
-console.log(convertText2Problem(text))
+// console.log(convertText2Problem(text))
+
+const s = new Set([1])
+console.log(s)

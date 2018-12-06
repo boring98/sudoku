@@ -7,17 +7,21 @@ const resultFileNam = 'standard_result.txt'
 
 // const ws = fs.createWriteStream('./standard_result.txt')
 
+// const original_problem = [
+//     [1, 2, 3, 4, 5, 6, 7, 8, 9],
+//     [0, 0, 0, 0, 0, 0, 0, 0, 0],
+//     [0, 0, 0, 0, 0, 0, 0, 0, 0],
+//     [0, 0, 0, 0, 0, 0, 0, 0, 0],
+//     [0, 0, 0, 0, 0, 0, 0, 0, 0],
+//     [0, 0, 0, 0, 0, 0, 0, 0, 0],
+//     [0, 0, 0, 0, 0, 0, 0, 0, 0],
+//     [0, 0, 0, 0, 0, 0, 0, 0, 0],
+//     [0, 0, 0, 0, 0, 0, 0, 0, 0],
+// ]
 const original_problem = [
-    [1, 2, 3, 4, 5, 6, 7, 8, 9],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [1, 2, 3, 4, 5, 6, 7, 8, 9], [4, 5, 6, 7, 8, 9, 1, 2, 3], [7, 8, 9, 1, 2, 3, 4, 5, 6], [2, 3, 1, 6, 9, 4, 8, 7, 5], [5, 6, 4, 8, 1, 7, 3, 9, 2], [9, 7, 8, 2, 3, 5, 6, 1, 4], [6, 4, 2, 5, 7, 1, 9, 3, 8], [8, 9, 7, 3, 6, 2, 5, 4, 1], [3, 1, 5, 9, 4, 8, 2, 6, 7]
 ]
+
 
 // const original_problem = [
 //     [0, 0, 3, 0, 9, 0, 0, 8, 0],
@@ -635,6 +639,81 @@ function findAllSolutions(problem) {
     return findAll(res.table, res.possibleValueArryOfOnePoint)
 }
 
+function findAllSolutionsWithoutRecursion() {
+    let sum = 0
+    let floorSum = 0
+    fs.appendFileSync(resultFileNam, '[\n')
+
+    const orignial_problem = [
+        [1, 2, 3, 4, 5, 6, 7, 8, 9],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ]
+    const sudo = new Sudo(orignial_problem)
+    sudo.update()
+    // console.log(sudo.possibleSet)
+
+    const stack = [{ problem: sudo.tableMap, possibleSet: sudo.possibleSet[1][0], point: [1, 0] }]
+    while (stack.length != 0) {
+        const elem = stack[stack.length - 1]
+        // console.log(elem)
+        const [x, y] = elem.point
+        if (elem.possibleSet.size == 0) {
+            stack.pop()
+            continue
+        }
+        const value = [...elem.possibleSet][0]
+        elem.possibleSet.delete(value)
+        const problem = deepcopy(elem.problem)
+        problem[x][y] = value
+        if (x == 8 && y == 8) {
+            // console.log(problem)
+            sum++
+            if (Math.floor(sum /1000) != floorSum) {
+                floorSum = Math.floor(sum /1000)
+                console.log(sum)
+            }
+            fs.appendFileSync(resultFileNam, JSON.stringify(problem) + ',\n')
+            stack.pop()
+            continue
+        }
+        // const sudo = new Sudo(problem)
+        // sudo.update()
+        const [next_x, next_y] = getNextPoint(x, y)
+        const possibleSet = getPossibleValueByPoint(problem, next_x, next_y)
+        // const possibleSet = sudo.possibleSet[next_x][next_y]
+        if (possibleSet.size == 0) {
+            stack.pop()
+            continue
+        }
+        stack.push({ problem: problem, possibleSet: possibleSet, point: [next_x, next_y] })
+    }
+    fs.appendFileSync(resultFileNam, ']\n')
+}
+
+function getPossibleValueByPoint(problem, x, y) {
+    if (problem[x][y] != 0) {
+        return new Set([problem[x][y]])
+    }
+    const s = new Set(Array.from({ length: 9 }, (v, k) => { return k + 1 }))
+    for (const regionIndex of getRegionIndexArrWherePointIn(x, y)) {
+        for (const [x, y] of new Region(regionIndex)) {
+            s.delete(problem[x][y])
+        }
+    }
+    return s
+}
+
+function getNextPoint(x, y) {
+    return y < 8 ? [x, y + 1] : [x + 1, 0]
+}
+
 function convertText2Problem(t) {
     const reg = /(\|(\s[\d,\.]){3}\s){3}/g
     let ret = t.replace(/\./g, '0').match(reg)
@@ -645,6 +724,10 @@ function convertText2Problem(t) {
         }
         return ret
     })
+}
+
+function getRegionIndexArrWherePointIn(x, y) {
+    return [x, 9 + y, 18 + Math.floor(x / 3) * 3 + Math.floor(y / 3)]
 }
 
 function deepcopy(obj) {
@@ -658,17 +741,19 @@ function deepcopy(obj) {
 function start(original_problem) {
     console.log('Question is:')
     console.log(original_problem)
-    const answer = findAllSolutionsForStandard(original_problem)
-    // const answer = solve(original_problem)
+    // const answer = findAllSolutionsForStandard(original_problem)
+    const answer = solve(original_problem)
     console.log('Answer is:')
     console.log(answer)
 }
+
 function startText(text) {
     const problem = convertText2Problem(text)
     start(problem)
 }
 
-start(original_problem)
+findAllSolutionsWithoutRecursion()
+// start(original_problem)
 // startText(`
 
 
