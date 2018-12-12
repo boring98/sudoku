@@ -72,5 +72,25 @@ of the digits 1 to 9.     +-------+-------+-------+       q   quit game
 `
 // console.log(convertText2Problem(text))
 
-const s = new Set([1])
-console.log(s)
+// const s = new Set([1])
+// console.log(s)
+
+const Crypto = require('./Crypto')
+const crypto = require('crypto');
+
+function md5sum(password) {
+    const md5 = crypto.createHash('md5');
+    return md5.update(password).digest('hex');
+}
+
+const org = '147258'
+const cry = new Crypto('aes-128-ecb', '0755821308331234')
+// const en = cry.encrypt(org)
+const de = cry.decrypt('Zok+Ff7+YiPY5vHb+ZAAQYqBj3SkZ+giM07kOin9HaSQKRa1rDrOHJnYhNiYnUv6he3L/kNQXORJkRilEz+JTuVJkM5SAmLEXZdZh6oOH+UkxJB/AEgzg+SZs/QhKIYb4F+HrZ9xjBQpH35/Nyub4g==')
+console.log(de)
+// console.log(md5sum('1620899823271936upload_f9646da4c78d6e0c3eeccefb07909022.jpg'))
+// Zok+Ff7+YiPY5vHb+ZAAQWxNcxjzC+FQKgFaTdsqtfz1LoQM/teOxcLpqYcPactdxQy6k+5sXheoPbHucU5LMY1BBu2y4Zjk5YwpaWusmzymueQKCVXm1B72eSDmdxnMJ01q3QdpdH3h/A6mrUHekQ==
+// Zok+Ff7+YiPY5vHb+ZAAQRhnyzuHa7Ky2fYRk6pEPBSHDrfqZv+HCcLiFPjZirqmsL2nVWiwdEuwqpxRsBjOZOurMTXBQshuKbHSdabhMRs=
+// Zok+Ff7+YiPY5vHb+ZAAQXH9jy+AkqTmOKPO4KcUjOaWhe+EoDhnjbvWO3PKc3MJ8Nhe0YZ/YMq62WDAp/rL8+urMTXBQshuKbHSdabhMRs=
+// F4pO6wMhEDZYOfbLtVMCXw==
+// F4pO6wMhEDZYOfbLtVMCXw==

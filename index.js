@@ -1,7 +1,8 @@
 //@ts-check
 
 const fs = require('fs')
-// const Buffer = require('buffer')
+const Region = require('./Region')
+const Sudo = require('./Sudo')
 
 const resultFileNam = 'standard_result.txt'
 
@@ -59,189 +60,9 @@ const original_problem = [
 //     [3, 4, 2, 7, 5, 8, 1, 6, 9],
 // ]
 
-class Region {
-    constructor(index) {
-        this.index = index
-    }
 
-    *[Symbol.iterator]() {
-        if (this.index >= 0 && this.index < 9) {
-            for (let i = 0; i < 9; i++) {
-                yield [this.index, i]
-            }
-        } else if (this.index >= 9 && this.index < 18) {
-            for (let i = 0; i < 9; i++) {
-                yield [i, this.index - 9]
-            }
-        } else if (this.index >= 18 && this.index < 27) {
-            for (let i = (Math.floor(this.index / 3) - 6) * 3; i < (Math.floor(this.index / 3) - 6) * 3 + 3; i++) {
-                for (let j = (this.index % 3) * 3; j < (this.index % 3) * 3 + 3; j++) {
-                    yield [i, j]
-                }
-            }
-        }
-    }
-}
 
-class Sudo {
-    constructor(tableMap, type = 0) {
-        if (tableMap.length != 9) {
-            // console.error('must be 9 lines')
-            throw new Error('must be 9 lines')
-        }
-        const validValueSet = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-        for (const line of tableMap) {
-            if (line.length != 9) {
-                throw new Error('must be 9 columns for each line')
-            }
-            for (const elem of line) {
-                if (!validValueSet.has(parseInt(elem))) {
-                    throw new Error('value must between 1 and 9')
-                }
-            }
-        }
-        this.tableMap = tableMap
-        this.type = type
-        this.possibleSet = Array.from({ length: 9 }, (v, k) => { return Array.from({ length: 9 }, (vv, kk) => { return new Set([1, 2, 3, 4, 5, 6, 7, 8, 9]) }) })
-    }
 
-    getValueByPoint(x, y) {
-        return this.tableMap[x][y]
-    }
-
-    /**
-     * return 0: finish and is a correct answer
-     * return 1: not finished, but reasonable till now
-     * return -1: wrong status can not be solved
-     */
-    getStatus() {
-        let res = 0
-        for (const region of this.getRegionIterator()) {
-            const resSet = new Set()
-            for (const [x, y] of region) {
-                if (this.tableMap[x][y] == 0) {
-                    res = 1
-                    continue
-                }
-                if (resSet.has(this.tableMap[x][y])) {
-                    return -1
-                }
-                resSet.add(this.tableMap[x][y])
-            }
-        }
-        return res
-    }
-
-    solve() {
-        let status = this.getStatus()
-        if (status == Sudo.Status.Wrong) {
-            throw new Error('The original problem is conflict!')
-        }
-        if (status == Sudo.Status.Correct) {
-            return 0
-        }
-        while (true) {
-            this.update()
-            if (this.getStatus() == Sudo.Status.Correct) {
-                return 0
-            } else if (this.getStatus() == Sudo.Status.Unfinished) {
-                // this.chooseOnePointAndTry()
-                this.update()
-            }
-        }
-    }
-
-    // chooseOnePointAndTry() {
-    //     for (const [x, y, value] of getOnePossiblePointValue()) {
-    //         this.tableMap[x][y] = value
-    //         this.update()
-    //         if (this.getStatus() == Sudo.Status.Correct) {
-    //             return 0
-    //         } else if (this.getStatus() == Sudo.Status.Unfinished) {
-    //             this.chooseOnePointAndTry()
-    //         }
-    //     }
-    // }
-
-    update() {
-        let decidedPointSet = new Set(Array.from(this.getPointIterator()).filter(([x, y, value]) => { return value != 0 }))
-        do {
-            this.updatePossibleSet(decidedPointSet)
-            decidedPointSet = this.getDecidedPointValueSet()
-
-        } while (decidedPointSet.size > 0);
-    }
-
-    updatePossibleSet(decidedPointSet) {
-        for (const [x, y, value] of decidedPointSet) {
-            this.tableMap[x][y] = value
-            this.possibleSet[x][y].clear()
-            for (const regionIndex of this.getRegionIndexArrWherePointIn(x, y)) {
-                for (const [i, j] of (new Region(regionIndex))) {
-                    this.possibleSet[i][j].delete(value)
-                }
-            }
-        }
-    }
-
-    getDecidedPointValueSet() {
-        const resSet = new Set()
-        // point decided
-        for (const [x, y, value] of this.getPointIterator()) {
-            if (this.possibleSet[x][y].size == 1) {
-                resSet.add([x, y, this.possibleSet[x][y].values().next().value])
-            }
-        }
-
-        // region decided
-        for (const region of this.getRegionIterator()) {
-            const hash = new Map()
-            const tmpSet = new Set()
-            for (const [i, j] of region) {
-                for (const value of this.possibleSet[i][j]) {
-                    if (!hash.has(value)) {
-                        hash.set(value, [i, j, value])
-                        tmpSet.add(value)
-                    } else {
-                        tmpSet.delete(value)
-                    }
-                }
-            }
-            for (const value of tmpSet) {
-                resSet.add(hash.get(value))
-            }
-        }
-        return resSet
-    }
-
-    getRegionIndexArrWherePointIn(x, y) {
-        return [x, 9 + y, 18 + Math.floor(x / 3) * 3 + Math.floor(y / 3)]
-    }
-
-    *[Symbol.iterator]() {
-        return this.getPointIterator()
-    }
-
-    *getPointIterator() {
-        for (let i = 0; i < 9; i++) {
-            for (let j = 0; j < 9; j++) {
-                yield [i, j, this.tableMap[i][j]]
-            }
-        }
-    }
-
-    *getRegionIterator() {
-        for (const iter of Array.from({ length: 27 }, (v, k) => { return new Region(k) })) {
-            yield iter
-        }
-    }
-}
-
-Sudo.Status = {
-    Correct: 0,
-    Unfinished: 1,
-    Wrong: -1
-}
 
 // console.log('Question is:')
 // console.log(original_problem)
@@ -640,9 +461,68 @@ function findAllSolutions(problem) {
 }
 
 function findAllSolutionsWithoutRecursion() {
+    const logPoint = 10000
+    let sum = 0
+    let timeInterval = Date.now()
+    // fs.appendFileSync(resultFileNam, '[\n')
+
+    const orignial_problem = [
+        [1, 2, 3, 4, 5, 6, 7, 8, 9],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0],
+    ]
+    const sudo = new Sudo(orignial_problem)
+    sudo.update()
+    // console.log(sudo.possibleSet)
+    const problem = sudo.tableMap
+
+    const stack = [{ possibleSet: sudo.possibleSet[1][0], point: [1, 0] }]
+    while (stack.length != 0) {
+        const elem = stack[stack.length - 1]
+        const [x, y] = elem.point
+        if (elem.possibleSet.size == 0) {
+            problem[x][y] = 0
+            stack.pop()
+            continue
+        }
+        const value = [...elem.possibleSet][0]
+        elem.possibleSet.delete(value)
+        // const problem = deepcopy(elem.problem)
+        problem[x][y] = value
+        if (x == 8 && y == 8) {
+            // console.log(sum)
+            sum++
+            if (sum % logPoint == 0) {
+                console.log(`count: ${sum}`)
+                console.log(`time cost(ms/${logPoint}): ${Date.now() - timeInterval}`)
+                console.log(problem)
+                timeInterval = Date.now()
+            }
+            // fs.appendFileSync(resultFileNam, JSON.stringify(problem) + ',\n')
+            problem[x][y] = 0
+            stack.pop()
+            continue
+        }
+        const [next_x, next_y] = getNextPoint(x, y)
+        const possibleSet = getPossibleValueByPoint(problem, next_x, next_y)
+        if (possibleSet.size == 0) {
+            continue
+        }
+        stack.push({ possibleSet: possibleSet, point: [next_x, next_y] })
+    }
+}
+
+function findAllSolutionsWithoutRecursionBak() {
     let sum = 0
     let floorSum = 0
-    fs.appendFileSync(resultFileNam, '[\n')
+    let timeInterval = Date.now()
+    // fs.appendFileSync(resultFileNam, '[\n')
 
     const orignial_problem = [
         [1, 2, 3, 4, 5, 6, 7, 8, 9],
@@ -675,11 +555,14 @@ function findAllSolutionsWithoutRecursion() {
         if (x == 8 && y == 8) {
             // console.log(problem)
             sum++
-            if (Math.floor(sum /1000) != floorSum) {
-                floorSum = Math.floor(sum /1000)
-                console.log(sum)
+            if (Math.floor(sum / 10000) != floorSum) {
+                floorSum = Math.floor(sum / 10000)
+                console.log(`count: ${sum}`)
+                console.log(`time cost(ms): ${Date.now() - timeInterval}`)
+                console.log(problem)
+                timeInterval = Date.now()
             }
-            fs.appendFileSync(resultFileNam, JSON.stringify(problem) + ',\n')
+            // fs.appendFileSync(resultFileNam, JSON.stringify(problem) + ',\n')
             stack.pop()
             continue
         }
@@ -689,12 +572,11 @@ function findAllSolutionsWithoutRecursion() {
         const possibleSet = getPossibleValueByPoint(problem, next_x, next_y)
         // const possibleSet = sudo.possibleSet[next_x][next_y]
         if (possibleSet.size == 0) {
-            stack.pop()
             continue
         }
         stack.push({ problem: problem, possibleSet: possibleSet, point: [next_x, next_y] })
     }
-    fs.appendFileSync(resultFileNam, ']\n')
+    // fs.appendFileSync(resultFileNam, ']\n')
 }
 
 function getPossibleValueByPoint(problem, x, y) {
@@ -703,8 +585,11 @@ function getPossibleValueByPoint(problem, x, y) {
     }
     const s = new Set(Array.from({ length: 9 }, (v, k) => { return k + 1 }))
     for (const regionIndex of getRegionIndexArrWherePointIn(x, y)) {
-        for (const [x, y] of new Region(regionIndex)) {
-            s.delete(problem[x][y])
+        for (const [i, j] of new Region(regionIndex)) {
+            if ((regionIndex < 9 && j > y) || (regionIndex >= 9 && regionIndex < 18 && i > x) || (regionIndex >= 18 && (i > x || (i == x && j > y)) )){
+                break
+            }
+            s.delete(problem[i][j])
         }
     }
     return s
